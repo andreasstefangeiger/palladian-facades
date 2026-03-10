@@ -1,15 +1,62 @@
-<html>
-<title>Palladian Facade Generator</title>
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Palladian Facade Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Procedural Drawing Lab</p>
+        <h1>Palladian Facade Studio</h1>
+      </div>
+      <p class="subline">Klare Proportionen statt Screensaver-Rauschen.</p>
+    </header>
 
-<style>
-svg {margin: 0 auto 0 auto;}
-body {overflow: hidden} 
-a {color: black;}
-a:visited {color: #666}
-</style>
+    <section class="workspace">
+      <aside class="panel card">
+        <h2>Komposition</h2>
 
-<a id="download" href="">SVG Download</a>
-<a id="loop" href="">Auto-regen</a>
+        <label for="widthRange">Hauptbreite <span id="widthValue">22</span></label>
+        <input id="widthRange" type="range" min="12" max="34" step="1" value="22">
 
-<script src="./palladio.browser.js"></script>
+        <label for="floorsRange">Geschosse <span id="floorsValue">5</span></label>
+        <input id="floorsRange" type="range" min="2" max="8" step="1" value="5">
+
+        <label for="wingsRange">Seitenfluegel <span id="wingsValue">2</span></label>
+        <input id="wingsRange" type="range" min="0" max="3" step="1" value="2">
+
+        <label for="rhythmRange">Fenster-Rhythmus <span id="rhythmValue">62</span>%</label>
+        <input id="rhythmRange" type="range" min="35" max="92" step="1" value="62">
+
+        <label for="seedInput">Seed</label>
+        <div class="seed-row">
+          <input id="seedInput" type="text" value="sgm-001" spellcheck="false">
+          <button id="randomSeed" type="button">Zufall</button>
+        </div>
+
+        <div class="button-grid">
+          <button id="regenerate" type="button">Neu generieren</button>
+          <button id="toggleAuto" type="button">Auto: Aus</button>
+          <button id="downloadSvg" type="button">SVG Export</button>
+          <button id="downloadPng" type="button">PNG Export</button>
+        </div>
+
+        <p id="statusLine" class="status">Bereit.</p>
+      </aside>
+
+      <section class="preview card" aria-label="Fassadenvorschau">
+        <svg id="facadeSvg" role="img" aria-label="Generierte palladianische Fassade"></svg>
+      </section>
+    </section>
+  </main>
+
+  <script src="./palladio.browser.js"></script>
+</body>
 </html>

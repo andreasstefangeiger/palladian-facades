@@ -1,5 +1,18 @@
-A Palladian facade generator for [ProcJam 2015](https://itch.io/jam/procjam), written in Livescript using SVG.
+A refreshed Palladian facade generator for the web.
 
-[Andrea Palladio](https://en.wikipedia.org/wiki/Andrea_Palladio) was a great architect from the 16th century, perhaps best known for his [Four Books](http://lccn.loc.gov/47044047) (high-quality PDF from the Library of Congress). The influence of his work is wide but is particularly visible in some early American architecture. Personally I went on many field trips to [Drayton Hall](https://en.wikipedia.org/wiki/Drayton_Hall) growing up. In a stroke of luck many of his designs are very geometric and regular, so capturing something of their feel in automatically generated SVG isn't actually that hard. 
+The original ProcJam 2015 experiment is still in this repo (`palladio.ls`), but the active front-end now uses a modern static setup:
 
-WTFPL, All Rites Reversed, do as you like. -POLM
+- responsive control panel (width, floors, wings, rhythm, seed)
+- deterministic generation by seed
+- direct `SVG` and `PNG` export
+- no build step required for the default UI
+
+## Run
+
+Open `index.html` in a browser, or serve the folder with a local static server:
+
+```bash
+python3 -m http.server 8080
+```
+
+Then open `http://localhost:8080`.
