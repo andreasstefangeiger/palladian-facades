@@ -1,0 +1,14 @@
+PALLADIO 2026 - SIMPLE PACKAGE
+
+Quick start:
+1) Unzip this package.
+2) Open "index.html" with double-click.
+3) Click "Neu (Seed)" to generate new facades.
+
+Export:
+- "SVG Export" for vector files
+- "PNG Export" for image files
+
+Privacy:
+- Runs fully local on your computer.
+- No account, no install, no cloud upload.

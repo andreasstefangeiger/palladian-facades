@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Palladio 2026 - Offline</title>  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Procedural Drawing Lab</p>
+        <h1>Palladio 2026</h1>
+      </div>
+      <p class="subline">Offline-Version: keine Anmeldung, keine Installation.</p>
+    </header>
+
+    <section class="workspace">
+      <aside class="panel card">
+        <h2>Komposition</h2>
+
+        <label for="widthRange">Hauptbreite <span id="widthValue">22</span></label>
+        <input id="widthRange" type="range" min="12" max="34" step="1" value="22">
+
+        <label for="floorsRange">Geschosse <span id="floorsValue">5</span></label>
+        <input id="floorsRange" type="range" min="2" max="8" step="1" value="5">
+
+        <label for="wingsRange">Seitenfluegel <span id="wingsValue">2</span></label>
+        <input id="wingsRange" type="range" min="0" max="3" step="1" value="2">
+
+        <label for="rhythmRange">Fenster-Rhythmus <span id="rhythmValue">62</span>%</label>
+        <input id="rhythmRange" type="range" min="35" max="92" step="1" value="62">
+
+        <label for="seedInput">Seed</label>
+        <div class="seed-row">
+          <input id="seedInput" type="text" value="sgm-001" spellcheck="false">
+          <button id="randomSeed" type="button">Zufall</button>
+        </div>
+
+        <div class="button-grid">
+          <button id="regenerate" type="button">Neu (Seed)</button>
+          <button id="toggleAuto" type="button">Auto: Aus</button>
+          <button id="downloadSvg" type="button">SVG Export</button>
+          <button id="downloadPng" type="button">PNG Export</button>
+        </div>
+
+        <p id="statusLine" class="status">Bereit.</p>
+      </aside>
+
+      <section class="preview card" aria-label="Fassadenvorschau">
+        <svg id="facadeSvg" role="img" aria-label="Generierte palladianische Fassade"></svg>
+      </section>
+    </section>
+  </main>
+
+  <script src="./palladio.browser.js"></script>
+</body>
+</html>
