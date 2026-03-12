@@ -49,6 +49,23 @@
         </div>
 
         <p id="statusLine" class="status">Bereit.</p>
+
+        <section class="quiz-block" aria-label="Quizmodus">
+          <h2>Quizmodus</h2>
+          <p class="quiz-intro">Original oder generiert? Teste den Blick fuer Fassadenlogik.</p>
+          <div class="quiz-top-actions">
+            <button id="startQuiz" type="button">Quiz starten</button>
+            <button id="stopQuiz" type="button">Quiz beenden</button>
+          </div>
+          <p id="quizScore" class="quiz-score">Noch nicht gestartet.</p>
+          <p id="quizQuestion" class="quiz-question" hidden>Ist diese Fassade eher originalnah oder generiert?</p>
+          <div id="quizAnswerRow" class="quiz-answer-row" hidden>
+            <button id="guessOriginal" type="button">Original</button>
+            <button id="guessGenerated" type="button">Generiert</button>
+          </div>
+          <button id="nextQuizRound" type="button" hidden>Naechste Runde</button>
+          <p id="quizFeedback" class="quiz-feedback" aria-live="polite"></p>
+        </section>
       </aside>
 
       <section class="preview card" aria-label="Fassadenvorschau">

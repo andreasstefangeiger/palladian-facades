@@ -58,6 +58,12 @@
 
   const STYLE_PART_A = ["Nobile", "Severa", "Basilica", "Loggia", "Portico", "Serliana"];
   const STYLE_PART_B = ["Classico", "Civico", "Monumentale", "Teatrale", "Rustico", "Ordinato"];
+  const REFERENCE_PROFILE_NAMES = [
+    "San Giorgio Studie I",
+    "San Giorgio Studie II",
+    "San Giorgio Hauptfassade",
+    "Palladio Kompositionsskizze"
+  ];
 
   const state = {
     widthUnits: 22,
@@ -65,7 +71,16 @@
     wings: 2,
     rhythm: 62,
     seed: "sgm-001",
-    auto: false
+    auto: false,
+    quiz: {
+      active: false,
+      round: 0,
+      correct: 0,
+      awaitingAnswer: false,
+      currentIsOriginal: false,
+      currentLabel: ""
+    },
+    manualSnapshot: null
   };
 
   const ui = {
@@ -84,7 +99,16 @@
     toggleAuto: document.getElementById("toggleAuto"),
     downloadSvg: document.getElementById("downloadSvg"),
     downloadPng: document.getElementById("downloadPng"),
-    statusLine: document.getElementById("statusLine")
+    statusLine: document.getElementById("statusLine"),
+    startQuiz: document.getElementById("startQuiz"),
+    stopQuiz: document.getElementById("stopQuiz"),
+    quizScore: document.getElementById("quizScore"),
+    quizQuestion: document.getElementById("quizQuestion"),
+    quizAnswerRow: document.getElementById("quizAnswerRow"),
+    guessOriginal: document.getElementById("guessOriginal"),
+    guessGenerated: document.getElementById("guessGenerated"),
+    nextQuizRound: document.getElementById("nextQuizRound"),
+    quizFeedback: document.getElementById("quizFeedback")
   };
 
   if (!ui.svg) {
@@ -107,6 +131,9 @@
 
     rangeBindings.forEach(({ key, input, output }) => {
       input.addEventListener("input", () => {
+        if (state.quiz.active) {
+          return;
+        }
         const value = Number(input.value);
         if (Number.isNaN(value)) {
           return;
@@ -118,6 +145,9 @@
     });
 
     ui.seedInput.addEventListener("keydown", (event) => {
+      if (state.quiz.active) {
+        return;
+      }
       if (event.key !== "Enter") {
         return;
       }
@@ -126,18 +156,30 @@
     });
 
     ui.seedInput.addEventListener("blur", () => {
+      if (state.quiz.active) {
+        return;
+      }
       commitSeed("Seed aktualisiert.");
     });
 
     ui.randomSeed.addEventListener("click", () => {
+      if (state.quiz.active) {
+        return;
+      }
       regenerateWithNewSeed("Neuer Seed");
     });
 
     ui.regenerate.addEventListener("click", () => {
+      if (state.quiz.active) {
+        return;
+      }
       regenerateWithNewSeed("Neu generiert");
     });
 
     ui.toggleAuto.addEventListener("click", () => {
+      if (state.quiz.active) {
+        return;
+      }
       setAuto(!state.auto);
       render(state.auto ? "Auto-Generierung aktiv." : "Auto-Generierung pausiert.");
     });
@@ -157,8 +199,31 @@
       }
       if (event.code === "Space") {
         event.preventDefault();
+        if (state.quiz.active) {
+          return;
+        }
         regenerateWithNewSeed("Neu generiert");
       }
+    });
+
+    ui.startQuiz.addEventListener("click", () => {
+      startQuiz();
+    });
+
+    ui.stopQuiz.addEventListener("click", () => {
+      stopQuiz();
+    });
+
+    ui.guessOriginal.addEventListener("click", () => {
+      submitQuizGuess(true);
+    });
+
+    ui.guessGenerated.addEventListener("click", () => {
+      submitQuizGuess(false);
+    });
+
+    ui.nextQuizRound.addEventListener("click", () => {
+      runQuizRound();
     });
 
     window.addEventListener("beforeunload", () => {
@@ -176,11 +241,7 @@
     ui.rhythmRange.value = String(state.rhythm);
     ui.rhythmValue.textContent = String(state.rhythm);
 
-    if (ui.seedInput.value.trim()) {
-      state.seed = ui.seedInput.value.trim();
-    } else {
-      ui.seedInput.value = state.seed;
-    }
+    ui.seedInput.value = state.seed;
     ui.toggleAuto.textContent = "Auto: Aus";
   }
 
@@ -211,19 +272,178 @@
     ui.toggleAuto.textContent = enabled ? "Auto: Ein" : "Auto: Aus";
   }
 
-  function render(statusText) {
+  function startQuiz() {
+    if (state.quiz.active) {
+      runQuizRound();
+      return;
+    }
+
+    setAuto(false);
+    state.manualSnapshot = {
+      widthUnits: state.widthUnits,
+      floors: state.floors,
+      wings: state.wings,
+      rhythm: state.rhythm,
+      seed: state.seed
+    };
+
+    state.quiz.active = true;
+    state.quiz.round = 0;
+    state.quiz.correct = 0;
+    state.quiz.awaitingAnswer = false;
+    state.quiz.currentLabel = "";
+    state.quiz.currentIsOriginal = false;
+
+    setComposerControlsDisabled(true);
+    setQuizFeedback("", "");
+    ui.quizQuestion.hidden = false;
+    ui.quizAnswerRow.hidden = false;
+    ui.nextQuizRound.hidden = true;
+    runQuizRound();
+  }
+
+  function stopQuiz() {
+    if (!state.quiz.active) {
+      return;
+    }
+
+    state.quiz.active = false;
+    state.quiz.awaitingAnswer = false;
+    setComposerControlsDisabled(false);
+
+    ui.quizQuestion.hidden = true;
+    ui.quizAnswerRow.hidden = true;
+    ui.nextQuizRound.hidden = true;
+    setQuizFeedback("", "");
+
+    if (state.manualSnapshot) {
+      state.widthUnits = state.manualSnapshot.widthUnits;
+      state.floors = state.manualSnapshot.floors;
+      state.wings = state.manualSnapshot.wings;
+      state.rhythm = state.manualSnapshot.rhythm;
+      state.seed = state.manualSnapshot.seed;
+      syncUiWithState();
+      state.manualSnapshot = null;
+    }
+
+    ui.quizScore.textContent = "Noch nicht gestartet.";
+    render("Quiz beendet.");
+  }
+
+  function runQuizRound() {
+    if (!state.quiz.active) {
+      return;
+    }
+
+    state.quiz.round += 1;
+    state.quiz.awaitingAnswer = true;
+    state.quiz.currentIsOriginal = Math.random() < 0.5;
+
+    const config = state.quiz.currentIsOriginal ? buildReferenceRoundConfig() : buildGeneratedRoundConfig();
+    state.widthUnits = config.widthUnits;
+    state.floors = config.floors;
+    state.wings = config.wings;
+    state.rhythm = config.rhythm;
+    state.seed = config.seed;
+    state.quiz.currentLabel = config.label;
+    syncUiWithState();
+
+    ui.quizQuestion.hidden = false;
+    ui.quizAnswerRow.hidden = false;
+    ui.nextQuizRound.hidden = true;
+    setQuizFeedback("", "");
+
+    const profile = state.quiz.currentIsOriginal ? "reference" : "free";
+    render(`Quiz Runde ${state.quiz.round}`, { profile });
+    ui.quizScore.textContent = `Runde ${state.quiz.round} | Treffer ${state.quiz.correct}`;
+  }
+
+  function submitQuizGuess(userThinksOriginal) {
+    if (!state.quiz.active || !state.quiz.awaitingAnswer) {
+      return;
+    }
+
+    state.quiz.awaitingAnswer = false;
+    const isCorrect = userThinksOriginal === state.quiz.currentIsOriginal;
+    if (isCorrect) {
+      state.quiz.correct += 1;
+    }
+
+    ui.quizAnswerRow.hidden = true;
+    ui.nextQuizRound.hidden = false;
+    ui.quizScore.textContent = `Runde ${state.quiz.round} | Treffer ${state.quiz.correct}`;
+
+    const correctType = state.quiz.currentIsOriginal ? "originalnah" : "generiert";
+    const feedback = isCorrect
+      ? `Richtig: Diese Runde war ${correctType} (${state.quiz.currentLabel}).`
+      : `Knapp daneben: Es war ${correctType} (${state.quiz.currentLabel}).`;
+    setQuizFeedback(feedback, isCorrect ? "correct" : "wrong");
+  }
+
+  function setComposerControlsDisabled(disabled) {
+    [
+      ui.widthRange,
+      ui.floorsRange,
+      ui.wingsRange,
+      ui.rhythmRange,
+      ui.seedInput,
+      ui.randomSeed,
+      ui.regenerate,
+      ui.toggleAuto
+    ].forEach((node) => {
+      node.disabled = disabled;
+    });
+  }
+
+  function setQuizFeedback(text, tone) {
+    ui.quizFeedback.textContent = text;
+    ui.quizFeedback.classList.remove("is-correct", "is-wrong");
+    if (tone === "correct") {
+      ui.quizFeedback.classList.add("is-correct");
+    }
+    if (tone === "wrong") {
+      ui.quizFeedback.classList.add("is-wrong");
+    }
+  }
+
+  function buildReferenceRoundConfig() {
+    const label = REFERENCE_PROFILE_NAMES[Math.floor(Math.random() * REFERENCE_PROFILE_NAMES.length)];
+    return {
+      label,
+      seed: `reference-${Date.now().toString(36)}-${Math.floor(Math.random() * 999)}`,
+      widthUnits: randomInt(20, 28),
+      floors: randomInt(4, 6),
+      wings: randomInt(1, 2),
+      rhythm: randomInt(54, 74)
+    };
+  }
+
+  function buildGeneratedRoundConfig() {
+    return {
+      label: "Freie Variation",
+      seed: makeSeed(),
+      widthUnits: randomInt(12, 34),
+      floors: randomInt(2, 8),
+      wings: randomInt(0, 3),
+      rhythm: randomInt(35, 92)
+    };
+  }
+
+  function render(statusText, options = {}) {
     flashRefresh();
     clearSvg(ui.svg);
     ui.svg.setAttribute("viewBox", `0 0 ${VIEWBOX.width} ${VIEWBOX.height}`);
     ui.svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
     const rng = mulberry32(hashSeed(state.seed));
-    const variation = buildVariation(rng);
+    const profile = options.profile || "free";
+    const variation = buildVariation(rng, profile);
     const metrics = computeMetrics(variation);
     const root = svgEl("g", { class: "facade-root" }, ui.svg);
 
     drawScene(root, rng, metrics, variation);
-    setStatus(`${statusText} | Typus: ${variation.label}`);
+    const profileText = profile === "reference" ? " | Referenzmodus" : "";
+    setStatus(`${statusText} | Typus: ${variation.label}${profileText}`);
   }
 
   function drawScene(root, rng, metrics, variation) {
@@ -315,7 +535,36 @@
     }
   }
 
-  function buildVariation(rng) {
+  function buildVariation(rng, profile = "free") {
+    if (profile === "reference") {
+      const label = pickOne(rng, REFERENCE_PROFILE_NAMES);
+      return {
+        label,
+        palette: pickOne(rng, [COLOR_SCHEMES[0], COLOR_SCHEMES[1]]),
+        roofStyle: pickOne(rng, ["pediment", "pediment", "broken"]),
+        wingRoofMode: "sync",
+        windowPattern: pickOne(rng, ["alternating", "bands"]),
+        pilasterMode: pickOne(rng, ["thin", "thick"]),
+        portalStyle: pickOne(rng, ["single", "triple"]),
+        roundBias: 0.16 + rng() * 0.2,
+        windowDensityJitter: -0.05 + rng() * 0.08,
+        balconyChance: 0.05 + rng() * 0.14,
+        rusticationChance: 0.14 + rng() * 0.16,
+        atticBand: true,
+        stairSteps: 4 + Math.floor(rng() * 2),
+        pedimentPeakScale: 0.14 + rng() * 0.08,
+        corniceScale: 0.6 + rng() * 0.22,
+        floorStretch: 0.28 + rng() * 0.25,
+        wingWidthSlope: 0.21 + rng() * 0.08,
+        wingFloorDrop: 0.95 + rng() * 0.4,
+        sectionInsetChance: 0.08 + rng() * 0.14,
+        leftWidthDelta: [randStep(rng, 1), 0, 0],
+        rightWidthDelta: [randStep(rng, 1), 0, 0],
+        leftFloorDelta: [0, 0, 0],
+        rightFloorDelta: [0, 0, 0]
+      };
+    }
+
     const roofStyle = pickOne(rng, ["pediment", "flat", "broken", "balustrade"]);
     const wingRoofMode = pickOne(rng, ["sync", "flat", "mixed"]);
     const windowPattern = pickOne(rng, ["alternating", "checker", "bands", "dense", "sparse"]);
@@ -1044,6 +1293,10 @@
 
   function pickOne(rng, items) {
     return items[Math.floor(rng() * items.length)];
+  }
+
+  function randomInt(min, max) {
+    return min + Math.floor(Math.random() * (max - min + 1));
   }
 
   function makeSeed() {
