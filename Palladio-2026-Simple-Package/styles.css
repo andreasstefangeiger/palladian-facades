@@ -224,6 +224,51 @@ button:active {
   color: #8a321f;
 }
 
+.grammar-block {
+  margin-top: 1rem;
+  padding-top: 0.95rem;
+  border-top: 1px dashed rgba(31, 37, 48, 0.22);
+}
+
+.grammar-intro {
+  margin: 0 0 0.5rem;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.grammar-score {
+  margin: 0.3rem 0 0.45rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.grammar-rules {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+}
+
+.grammar-rules li {
+  margin: 0.28rem 0;
+}
+
+.grammar-rules li.is-pass {
+  color: #1f6e35;
+}
+
+.grammar-rules li.is-fail {
+  color: #8a321f;
+}
+
+.grammar-hint {
+  margin: 0.55rem 0 0;
+  min-height: 1.3rem;
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+}
+
 .preview {
   position: relative;
   overflow: hidden;

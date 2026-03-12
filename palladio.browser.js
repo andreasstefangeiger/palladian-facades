@@ -108,7 +108,14 @@
     guessOriginal: document.getElementById("guessOriginal"),
     guessGenerated: document.getElementById("guessGenerated"),
     nextQuizRound: document.getElementById("nextQuizRound"),
-    quizFeedback: document.getElementById("quizFeedback")
+    quizFeedback: document.getElementById("quizFeedback"),
+    grammarScore: document.getElementById("grammarScore"),
+    ruleAxis: document.getElementById("ruleAxis"),
+    ruleHierarchy: document.getElementById("ruleHierarchy"),
+    ruleProportion: document.getElementById("ruleProportion"),
+    ruleRhythm: document.getElementById("ruleRhythm"),
+    ruleCrown: document.getElementById("ruleCrown"),
+    grammarHint: document.getElementById("grammarHint")
   };
 
   if (!ui.svg) {
@@ -429,6 +436,133 @@
     };
   }
 
+  function updateGrammarPanel(metrics, variation, profile) {
+    const ruleResults = [
+      { key: "axis", label: "Zentralachse", ...evaluateAxis(metrics) },
+      { key: "hierarchy", label: "Hierarchie", ...evaluateHierarchy(metrics) },
+      { key: "proportion", label: "Proportion", ...evaluateProportion(variation) },
+      { key: "rhythm", label: "Rhythmus", ...evaluateRhythm(variation) },
+      { key: "crown", label: "Abschluss", ...evaluateCrown(variation) }
+    ];
+
+    const passed = ruleResults.filter((rule) => rule.pass).length;
+    const score = Math.round((passed / ruleResults.length) * 100);
+    const mode = profile === "reference" ? "Referenz" : state.quiz.active ? "Quiz" : "Entwurf";
+    ui.grammarScore.textContent = `Grammatik-Score: ${score}% (${passed}/5) | ${mode}`;
+
+    const nodeMap = {
+      axis: ui.ruleAxis,
+      hierarchy: ui.ruleHierarchy,
+      proportion: ui.ruleProportion,
+      rhythm: ui.ruleRhythm,
+      crown: ui.ruleCrown
+    };
+
+    ruleResults.forEach((rule) => {
+      setGrammarRule(nodeMap[rule.key], rule.pass, rule.label, rule.detail);
+    });
+
+    ui.grammarHint.textContent = buildGrammarHint(ruleResults, profile);
+  }
+
+  function evaluateAxis(metrics) {
+    if (metrics.wingConfigs.length === 0) {
+      return { pass: true, detail: "Kompaktbau ohne Fluegel bleibt achsenscharf." };
+    }
+
+    let symmetryDelta = 0;
+    metrics.wingConfigs.forEach((wing) => {
+      symmetryDelta += Math.abs(wing.leftWidth - wing.rightWidth);
+      symmetryDelta += Math.abs(wing.leftFloors - wing.rightFloors);
+    });
+
+    const pass = symmetryDelta <= Math.max(1, metrics.wingConfigs.length);
+    const detail = pass
+      ? `Spiegelung stabil (Delta ${symmetryDelta}).`
+      : `Links/Rechts weichen stark ab (Delta ${symmetryDelta}).`;
+    return { pass, detail };
+  }
+
+  function evaluateHierarchy(metrics) {
+    if (metrics.wingConfigs.length === 0) {
+      return { pass: true, detail: "Eine Hauptmasse, klare Prioritaet." };
+    }
+
+    const maxWingWidth = Math.max(...metrics.wingConfigs.map((wing) => Math.max(wing.leftWidth, wing.rightWidth)));
+    const maxWingFloors = Math.max(...metrics.wingConfigs.map((wing) => Math.max(wing.leftFloors, wing.rightFloors)));
+    const widthDominance = state.widthUnits >= maxWingWidth + 1;
+    const floorDominance = state.floors >= maxWingFloors;
+    const pass = widthDominance && floorDominance;
+    const detail = pass
+      ? "Mittelteil dominiert Breite und Hoehe."
+      : "Mittelteil sollte deutlicher ueber den Fluegeln stehen.";
+    return { pass, detail };
+  }
+
+  function evaluateProportion(variation) {
+    const ratio = state.widthUnits / Math.max(1, state.floors);
+    const ratioPass = ratio >= 3 && ratio <= 6;
+    const slopePass = variation.wingWidthSlope >= 0.18 && variation.wingWidthSlope <= 0.3;
+    const pass = ratioPass && slopePass;
+    const detail = pass
+      ? `Verhaeltnis ${ratio.toFixed(1)} passt zum Palladio-Korridor.`
+      : `Verhaeltnis ${ratio.toFixed(1)} wirkt ausserhalb des typischen Korridors.`;
+    return { pass, detail };
+  }
+
+  function evaluateRhythm(variation) {
+    const rhythmPass = state.rhythm >= 48 && state.rhythm <= 78;
+    const patternPass = ["alternating", "bands", "checker"].includes(variation.windowPattern);
+    const pass = rhythmPass && patternPass;
+    const detail = pass
+      ? `Rhythmus ${state.rhythm}% mit Muster "${variation.windowPattern}".`
+      : `Rhythmus/Muster ist eher frei (${state.rhythm}%, ${variation.windowPattern}).`;
+    return { pass, detail };
+  }
+
+  function evaluateCrown(variation) {
+    const roofPass = variation.roofStyle !== "flat" || variation.corniceScale >= 0.68;
+    const detail = roofPass
+      ? `Abschluss klar lesbar (${variation.roofStyle}).`
+      : `Abschluss zu flach (${variation.roofStyle}); markanteres Dach hilft.`;
+    return { pass: roofPass, detail };
+  }
+
+  function setGrammarRule(node, pass, label, detail) {
+    if (!node) {
+      return;
+    }
+    node.classList.remove("is-pass", "is-fail");
+    node.classList.add(pass ? "is-pass" : "is-fail");
+    const prefix = pass ? "OK" : "NO";
+    node.textContent = `${prefix} ${label}: ${detail}`;
+  }
+
+  function buildGrammarHint(ruleResults, profile) {
+    if (profile === "reference") {
+      return "Referenzmodus: beobachte, wie wenige Eingriffe bereits eine klare Ordnung erzeugen.";
+    }
+
+    const firstFail = ruleResults.find((rule) => !rule.pass);
+    if (!firstFail) {
+      return "Stark: Alle Kernregeln greifen. Jetzt bewusst eine Regel brechen und Wirkung vergleichen.";
+    }
+
+    if (firstFail.key === "axis") {
+      return "Tipp: Halte linke/rechte Fluegel naeher zusammen, dann wird die Achse lesbarer.";
+    }
+    if (firstFail.key === "hierarchy") {
+      return "Tipp: Mach den Mittelteil breiter oder ein Geschoss hoeher als die Fluegel.";
+    }
+    if (firstFail.key === "proportion") {
+      return "Tipp: Suche ein ruhiges Breite-zu-Hoehe-Verhaeltnis zwischen etwa 3:1 und 6:1.";
+    }
+    if (firstFail.key === "rhythm") {
+      return "Tipp: Nimm ein regelmaessiges Fenster-Muster und bleib beim Rhythmus in der Mitte.";
+    }
+    return "Tipp: Markiere den Abschluss mit staerkerem Gebaelk oder Pediment.";
+  }
+
   function render(statusText, options = {}) {
     flashRefresh();
     clearSvg(ui.svg);
@@ -442,6 +576,7 @@
     const root = svgEl("g", { class: "facade-root" }, ui.svg);
 
     drawScene(root, rng, metrics, variation);
+    updateGrammarPanel(metrics, variation, profile);
     const profileText = profile === "reference" ? " | Referenzmodus" : "";
     setStatus(`${statusText} | Typus: ${variation.label}${profileText}`);
   }
